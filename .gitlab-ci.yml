@@ -1,0 +1,51 @@
+# ============================================================
+#  mermaid-repair — CI Pipeline
+# ============================================================
+#  lint + test the library. The fixture render-verification tests
+#  (marked `mmdc`) require the Mermaid CLI and run in a dedicated
+#  stage on a node-capable image; they are allowed to be skipped
+#  where mmdc is unavailable.
+# ============================================================
+
+stages:
+  - lint
+  - test
+  - verify
+
+variables:
+  UV_CACHE_DIR: "$CI_PROJECT_DIR/.uv-cache"
+
+default:
+  image: python:3.11-slim
+  before_script:
+    - pip install --quiet uv
+    - uv sync --extra dev
+  cache:
+    key: "$CI_COMMIT_REF_SLUG"
+    paths:
+      - .uv-cache/
+
+lint:
+  stage: lint
+  script:
+    - uv run ruff check src tests
+
+test:
+  stage: test
+  script:
+    # Render-verification tests self-skip when mmdc is absent on this image.
+    - uv run pytest -q
+
+verify-render:
+  stage: verify
+  image: node:20-bookworm-slim
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends python3 python3-pip python3-venv >/dev/null
+    - pip install --quiet --break-system-packages uv || pip install --quiet uv
+    - uv sync --extra dev
+    - npm install -g @mermaid-js/mermaid-cli
+  script:
+    - uv run pytest -q -m mmdc
+  allow_failure: true
+  rules:
+    - when: manual

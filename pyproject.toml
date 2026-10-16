@@ -1,6 +1,6 @@
 [project]
 name = "mermaid-repair"
-version = "0.1.0"
+version = "0.1.1"
 description = "Grammar-driven repair for LLM-generated Mermaid diagrams, verified against the real Mermaid parser."
 readme = "README.md"
 requires-python = ">=3.11"

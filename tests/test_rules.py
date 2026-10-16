@@ -5,6 +5,7 @@ from __future__ import annotations
 from mermaid_repair.markdown import repair_markdown
 from mermaid_repair.rules import (
     close_subgraphs,
+    dedupe_subgraph_ids,
     fix_arrows,
     quote_labels,
     strip_bad_style,
@@ -97,6 +98,37 @@ def test_close_subgraphs_multiple_missing():
     assert out.changed
     # two opens, one end -> one more end added
     assert out.text.rstrip().endswith("end")
+
+
+# ── dedupe_subgraph_ids ───────────────────────────────────────────────────────
+def test_dedupe_subgraph_renames_colliding_id():
+    src = "graph LR\n  subgraph Client\n    Client[Client Application]\n  end"
+    out = dedupe_subgraph_ids(src)
+    assert out.changed
+    assert "subgraph Client_grp [Client]" in out.text
+    # the node itself is untouched
+    assert "Client[Client Application]" in out.text
+
+
+def test_dedupe_subgraph_leaves_noncolliding_title():
+    # "Messaging" is a subgraph title with no node of the same id -> untouched.
+    src = "graph LR\n  subgraph Messaging\n    SQS[Queue]\n  end"
+    out = dedupe_subgraph_ids(src)
+    assert not out.changed
+
+
+def test_dedupe_subgraph_leaves_explicit_id_form():
+    # Already in `id [Title]` form -> untouched even if a node shares the title.
+    src = "graph LR\n  subgraph Client_grp [Client]\n    Client[App]\n  end"
+    out = dedupe_subgraph_ids(src)
+    assert not out.changed
+
+
+def test_dedupe_subgraph_ignores_multiword_title():
+    # Multi-word bare titles are the title, not a single id -> untouched.
+    src = "graph LR\n  subgraph Core Services\n    A[Svc]\n  end"
+    out = dedupe_subgraph_ids(src)
+    assert not out.changed
 
 
 # ── strip_bad_style ─────────────────────────────────────────────────────────

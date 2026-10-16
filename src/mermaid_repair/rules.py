@@ -172,6 +172,60 @@ def close_subgraphs(src: str) -> RuleOutcome:
 
 
 # ──────────────────────────────────────────────────────────────────────────
+# Rule: dedupe_subgraph_ids
+# ──────────────────────────────────────────────────────────────────────────
+# A bare ``subgraph Foo`` declares both the subgraph's id AND its title as
+# "Foo". If a node with id "Foo" also exists, Mermaid errors with
+# "Setting Foo as parent of Foo would create a cycle". The fix is to give the
+# subgraph an explicit id distinct from the colliding node, preserving the
+# visible title: ``subgraph Foo`` -> ``subgraph Foo_grp [Foo]``.
+_NODE_DEF = re.compile(r"\b([A-Za-z0-9_]+)\s*(?:\[|\(|\{)")
+# Bare-title subgraph: `subgraph Title` with NO explicit `[...]` id form and no
+# quotes. Captures leading indent and the title token(s) up to end of line.
+_SUBGRAPH_BARE = re.compile(r"^(\s*)subgraph\s+([A-Za-z0-9_]+)\s*$")
+
+
+def dedupe_subgraph_ids(src: str) -> RuleOutcome:
+    """Give a bare ``subgraph X`` an explicit distinct id when a node ``X`` also
+    exists, so Mermaid does not error on the id/parent collision.
+
+    Only single-token bare titles are considered (``subgraph Core Services`` is
+    multi-word and Mermaid already treats the extra words as the title, so it
+    does not collide with a node id the same way). Subgraphs already using the
+    ``id [Title]`` form are left untouched.
+    """
+    lines = src.split("\n")
+
+    node_ids: set[str] = set()
+    for line in lines:
+        for m in _NODE_DEF.finditer(line):
+            node_ids.add(m.group(1))
+
+    notes: list[str] = []
+    out_lines: list[str] = []
+    for line in lines:
+        m = _SUBGRAPH_BARE.match(line)
+        if m:
+            indent, title = m.group(1), m.group(2)
+            if title in node_ids:
+                new_id = f"{title}_grp"
+                # Guard against an unlikely clash with an existing id.
+                while new_id in node_ids:
+                    new_id += "_"
+                replacement = f"{indent}subgraph {new_id} [{title}]"
+                notes.append(
+                    f"renamed subgraph id to avoid node collision: "
+                    f"{line.strip()!r} -> {replacement.strip()!r}"
+                )
+                out_lines.append(replacement)
+                continue
+        out_lines.append(line)
+
+    text = "\n".join(out_lines)
+    return RuleOutcome(text=text, changed=bool(notes), notes=notes)
+
+
+# ──────────────────────────────────────────────────────────────────────────
 # Rule: strip_bad_style
 # ──────────────────────────────────────────────────────────────────────────
 _STYLE_LINE = re.compile(r"^\s*(style|linkStyle)\s+(\S+)")
@@ -216,5 +270,6 @@ ALL_RULES = [
     fix_arrows,
     quote_labels,
     close_subgraphs,
+    dedupe_subgraph_ids,
     strip_bad_style,
 ]

@@ -75,6 +75,7 @@ Each rule is independent and individually tested.
 | `fix_arrows` | Completes edges missing an arrowhead: `A --|x| B` → `A -->|x| B`; `-.|x|` → `-.->|x|` |
 | `quote_labels` | Quotes labels containing `()`, `<br/>`, `/`, `<>`, `&`; cylinder quotes go inside: `D[(Orders)]` → `D[("Orders")]` |
 | `close_subgraphs` | Appends missing `end` for unbalanced `subgraph` blocks |
+| `dedupe_subgraph_ids` | Renames `subgraph X` → `subgraph X_grp [X]` when a node `X` also exists (avoids the id/parent collision error) |
 | `strip_bad_style` | Drops `style <id>` directives referencing an undefined node id |
 
 ## Development

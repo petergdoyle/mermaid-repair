@@ -1,0 +1,56 @@
+graph LR
+    subgraph Client
+        Client[Client Application]
+    end
+
+    subgraph API Layer
+        APIGW[API Gateway]
+    end
+
+    subgraph Core Services
+        AuthSvc["Auth Service<br/>(Cognito)"]
+        CheckoutSvc["Checkout Service"]
+        PaymentSvc["Payment Service"]
+        InventoryRsvSvc["Inventory Reservation Service"]
+        OrderSvc["Order Service"]
+        NotificationSvc["Notification Service"]
+    end
+
+    subgraph Messaging
+        SQS["SQS Queue(s)"]
+        SNS["SNS Topic(s)"]
+    end
+
+    subgraph Data Stores
+        DB["Order<br/>Database"]
+        InventoryDB["Inventory<br/>Database"]
+    end
+
+    Client --> APIGW
+    APIGW --> AuthSvc
+    APIGW --> CheckoutSvc
+
+    CheckoutSvc --> PaymentSvc
+    CheckoutSvc --> InventoryRsvSvc
+    CheckoutSvc --> OrderSvc
+
+    PaymentSvc --> DB
+    InventoryRsvSvc --> InventoryDB
+
+    OrderSvc --> DB
+    OrderSvc --> SNS
+
+    NotificationSvc --> SQS
+    SQS --> NotificationSvc
+
+    style APIGW fill:#f9f,stroke:#333,stroke-width:2px
+    style AuthSvc fill:#ccf,stroke:#333,stroke-width:2px
+    style CheckoutSvc fill:#ccf,stroke:#333,stroke-width:2px
+    style PaymentSvc fill:#ccf,stroke:#333,stroke-width:2px
+    style InventoryRsvSvc fill:#ccf,stroke:#333,stroke-width:2px
+    style OrderSvc fill:#ccf,stroke:#333,stroke-width:2px
+    style NotificationSvc fill:#ccf,stroke:#333,stroke-width:2px
+    style SQS fill:#eee,stroke:#333,stroke-width:1px
+    style SNS fill:#eee,stroke:#333,stroke-width:1px
+    style DB fill:#eee,stroke:#333,stroke-width:1px
+    style InventoryDB fill:#eee,stroke:#333,stroke-width:1px

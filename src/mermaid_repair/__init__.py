@@ -36,4 +36,4 @@ __all__ = [
     "repair_markdown",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"

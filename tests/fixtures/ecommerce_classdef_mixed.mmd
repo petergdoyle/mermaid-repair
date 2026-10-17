@@ -1,0 +1,70 @@
+graph TD
+    %% Styling
+    classDef awsService fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef external fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
+    classDef dataStore fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
+    classDef client fill:#ffebee,stroke:#c62828,stroke-width:2px;
+
+    subgraph Client_Layer [Client Layer]
+        User[User Browser/Mobile App]:::client
+    end
+
+    subgraph AWS_Edge [AWS Edge & Entry]
+        CloudFront[Amazon CloudFront]:::awsService
+        API_GW[Amazon API Gateway]:::awsService
+    end
+
+    subgraph Microservices_Layer [Microservices Layer]
+        AuthSvc[Auth Service<br/>(Cognito Integration)]:::awsService
+        CheckoutSvc[Checkout Orchestrator<br/>(Lambda)]:::awsService
+        InventorySvc[Inventory Service<br/>(Lambda + DynamoDB)]:::awsService
+        PaymentSvc[Payment Service<br/>(Stripe/PayPal Adapter)]:::awsService
+        NotifySvc[Notification Service<br/>(Lambda)]:::awsService
+    end
+
+    subgraph Data_Layer [Data & Messaging Layer]
+        UserDB[(DynamoDB<br/>Users/Auth)]:::dataStore
+        OrderDB[(DynamoDB<br/>Orders)]:::dataStore
+        InventoryDB[(DynamoDB<br/>Inventory)]:::dataStore
+        SQS_Queue[SQS Queue<br/>Async Tasks]:::awsService
+        SNS_Topic[SNS Topic<br/>Email Events]:::awsService
+        S3_Bucket[S3 Bucket<br/>Receipts/Images]:::dataStore
+    end
+
+    subgraph External_Providers [External Providers]
+        Stripe[Stripe/PayPal API]:::external
+        SES[AWS SES<br/>Email Service]:::external
+    end
+
+    %% Flows
+    User -->|HTTPS/SSL| CloudFront
+    CloudFront -->|HTTP/REST| API_GW
+
+    %% Auth Flow
+    API_GW -->|Validate Token| AuthSvc
+    AuthSvc -.->|Verify JWT| Cognito[Amazon Cognito]:::awsService
+    AuthSvc -->|Check User State| UserDB
+
+    %% Checkout Orchestrator
+    API_GW -->|POST /checkout| CheckoutSvc
+
+    %% Inventory Reservation (Critical Path)
+    CheckoutSvc -->|Reserve Stock| InventorySvc
+    InventorySvc -->|Read/Write| InventoryDB
+    InventorySvc -.->|Update Cache| DAX[(DynamoDB Accelerator)]:::dataStore
+
+    %% Payment Processing
+    CheckoutSvc -->|Process Payment| PaymentSvc
+    PaymentSvc -->|Charge| Stripe
+
+    %% Async Notification & Order Finalization
+    PaymentSvc --|Payment Success| SQS_Queue
+    SQS_Queue -->|Consume| NotifySvc
+    NotifySvc -->|Send Email| SES
+    SES -.->|Log| S3_Bucket
+
+    %% Order Persistence
+    CheckoutSvc -->|Save Transaction| OrderDB
+
+    %% Inventory Release Logic (Post-Payment)
+    SQS_Queue -.->|Release Stock if Failed| InventorySvc

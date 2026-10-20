@@ -15,14 +15,14 @@ LLMs reliably produce *nearly* valid Mermaid — then trip on a small, finite se
 With `uv` (recommended):
 
 ```bash
-uv pip install "mermaid-repair @ git+https://repo.dpsk12.org/amazon-web-services/dps-productivity/mermaid-repair.git@v0.1.0"
+uv pip install "mermaid-repair @ git+https://github.com/petergdoyle/mermaid-repair.git@v0.1.1"
 ```
 
 Or add to a consuming project's `pyproject.toml`:
 
 ```toml
 dependencies = [
-    "mermaid-repair @ git+https://repo.dpsk12.org/amazon-web-services/dps-productivity/mermaid-repair.git@v0.1.0",
+    "mermaid-repair @ git+https://github.com/petergdoyle/mermaid-repair.git@v0.1.1",
 ]
 ```
 
